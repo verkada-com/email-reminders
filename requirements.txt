@@ -1,0 +1,5 @@
+git+ssh://git@github.com/verkada-com/base-utils.git@main
+google-cloud-bigquery
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

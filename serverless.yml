@@ -1,0 +1,71 @@
+service: lambda-as-container-test
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  
+  stage: dev
+  region: us-west-1
+  runtime: python3.8
+
+  ecr:
+    images:
+      baseimage:
+        path: ./
+        file: ./container-deployment/Dockerfile.deployment
+        platform: linux/amd64
+        buildArgs:
+          SSH_PUB_KEY: ${file(./container-deployment/copy-ssh-keys.js):SSH_PUB_KEY}
+          SSH_PRIV_KEY: ${file(./container-deployment/copy-ssh-keys.js):SSH_PRIV_KEY}
+          SSH_KNOWN_HOSTS: ${file(./container-deployment/copy-ssh-keys.js):SSH_KNOWN_HOSTS}
+  
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource: "arn:aws:secretsmanager:us-west-1:185719442761:secret:ListEngineSecrets-6YtAVr"
+    - Effect: "Allow"
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource: "arn:aws:secretsmanager:us-west-1:185719442761:secret:DdApiKeySecret-WdS34EbDxhnq-PugLPT"
+      
+  # Set environment variables
+  environment:
+    GOOGLE_APPLICATION_CREDENTIALS: ${env:GOOGLE_APPLICATION_CREDENTIALS}
+    POWERTOOLS_SERVICE_NAME: ${self:service}
+    DD_SITE: datadoghq.com
+    DD_API_KEY_SECRET_ARN: "arn:aws:secretsmanager:us-west-1:185719442761:secret:DdApiKeySecret-WdS34EbDxhnq-PugLPT"
+    DD_TRACE_ENABLED: true
+    DD_ENV: ${sls:stage}
+    DD_SERVICE: ${self:service}
+    DD_VERSION: 1.0
+    DD_CAPTURE_LAMBDA_PAYLOAD: true
+
+functions:
+  # Container lambda - running dependencies copied into image (Slack)
+  function1:
+    image: 
+      name: baseimage
+      command: "function1.lambda_handler"
+    timeout: 900
+
+  # Container lambda - running dependencies installed in lambda container (Bigquery)
+  function2:
+    image:
+      name: baseimage
+      command: "function2.lambda_handler"
+    timeout: 900
+
+  # Classic lambda - this is your default style lambda that is deployed to lambda code storage. 
+  function3:
+    handler: function3.lambda_handler
+    timeout: 900
+
+plugins:
+  - serverless-prune-plugin
+
+custom:
+  prune: # Lambda code pruning config
+    automatic: true
+    number: 3
+

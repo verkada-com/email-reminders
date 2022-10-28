@@ -1,0 +1,23 @@
+FROM amazon/aws-lambda-python:3.8
+ARG FUNCTION_DIR="/var/task"
+ARG SSH_PUB_KEY
+ARG SSH_PRIV_KEY
+ARG SSH_KNOWN_HOSTS
+
+WORKDIR ${FUNCTION_DIR}
+
+# Install git to enable pip installing from a git repo
+RUN yum -y install git
+
+# Take the build args containing the key info, write them to ~/.ssh
+# so that we can pull private python packages from GitHub
+RUN mkdir /root/.ssh && \
+    printf "%s" "${SSH_PRIV_KEY}" > /root/.ssh/id_ed25519 && \
+    printf "%s" "${SSH_PUB_KEY}" > /root/.ssh/id_ed25519.pub && \
+    printf "%s" "${SSH_KNOWN_HOSTS}" > /root/.ssh/known_hosts && \
+    chmod 600 /root/.ssh/id_ed25519 
+
+COPY --from=public.ecr.aws/datadog/lambda-extension:latest /opt/extensions/ /opt/extensions
+COPY . .
+
+RUN pip3 install --target . -r requirements.txt
