@@ -18,6 +18,9 @@ fi
 # Copy SSH creds to ./var to pull private python packages from our github
 (mkdir -p ./var && cp -r ~/.ssh ./var/) || (echo "Couldn't find your SSH keys at ~/.ssh Please make sure your SSH keys are set up with Github."; exit 1)
 
+# Download verkadasecurity.co creds
+aws s3 cp s3://marketing-operations-verkada/creds/verkadasecurity.co/bookmeetingservice.json ./var/creds/google/bookmeetingservice.json
+
 # Build the dev container
 docker build . \
   --build-arg AWS_ACCESS_KEY=$access_key \
